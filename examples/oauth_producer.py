@@ -36,19 +36,33 @@ def _get_token(args, config):
     It is not used in this example but you can put arbitrary values to
     configure how you can get the token (e.g. which token URL to use)
     """
+    print("GETTING TOKEN")
     payload = {
         'grant_type': 'client_credentials',
-        'scope': ' '.join(args.scopes)
+        'client_id': args.client_id,
+        'client_secret': args.client_secret,
+        'audience': 'localhost',
+        # 'scope': ' '.join(args.scopes)
     }
-    resp = requests.post(args.token_url,
-                         auth=(args.client_id, args.client_secret),
-                         data=payload)
-    token = resp.json()
-    return token['access_token'], time.time() + float(token['expires_in'])
+    print(f"GETTING TOKEN: {args.token_url}, payload: {payload}")
+    try:
+        resp = requests.post(args.token_url,
+                                # headers={'content-type': 'application/json'},
+                            #  auth=(args.client_id, args.client_secret),
+                                json=payload)
+        print(f"response status: {resp.status_code}, body: {resp.content}")
+        token = resp.json()
+        return token['access_token'], time.time() + float(token['expires_in'])
+    except Exception as e:
+        print(f"Exception: {e}")
 
 
 def producer_config(args):
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger.info("producer_config")
+    logging.getLogger('kafka').setLevel(logging.DEBUG)
+
     return {
         'bootstrap.servers': args.bootstrap_servers,
         'key.serializer': StringSerializer('utf_8'),
@@ -94,6 +108,11 @@ def main(args):
     delimiter = args.delimiter
 
     producer_conf = producer_config(args)
+
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    logger.warning(f"producer_conf: {producer_conf}")
+
 
     producer = SerializingProducer(producer_conf)
 
